@@ -1,0 +1,250 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+:root {
+  /* === Color Palette — White Minimalist High-Tech === */
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --accent: #0ea5e9;
+  --accent-light: #38bdf8;
+  --accent-pink: #ec4899;
+  --accent-pink-light: #f9a8d4;
+  --neon-purple: #8b5cf6;
+  --neon-cyan: #06b6d4;
+  --neon-pink: #f43f5e;
+
+  /* === Backgrounds === */
+  --bg-deep: #f0f2f8;
+  --bg-dark: #e8ebf2;
+  --bg-card: rgba(255, 255, 255, 0.88);
+  --bg-glass: rgba(99, 102, 241, 0.06);
+  --bg-glass-hover: rgba(99, 102, 241, 0.12);
+  --bg-input: rgba(0, 0, 0, 0.03);
+
+  /* === Text === */
+  --text-primary: #1e1b4b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+
+  /* === Borders === */
+  --border-glass: rgba(99, 102, 241, 0.15);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+
+  /* === Shadows === */
+  --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.15);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --shadow-neon: 0 0 20px rgba(14, 165, 233, 0.2);
+
+  /* === Typography === */
+  --font-primary: 'Inter', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* === Spacing === */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* === Transitions === */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-primary);
+  color: var(--text-primary);
+  background: var(--bg-deep);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.25);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.4);
+}
+
+/* === Glass Card === */
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-card);
+}
+
+.glass-card-hover {
+  transition: all var(--duration-normal) var(--ease-smooth);
+}
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+/* === Gradient Text === */
+.neon-text {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.neon-text-pink {
+  background: linear-gradient(135deg, var(--neon-pink), var(--accent-pink-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === Button Base === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  font-family: var(--font-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-spring);
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+}
+.btn:hover::before {
+  opacity: 1;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+}
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
+}
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-ghost {
+  background: var(--bg-glass);
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+}
+.btn-ghost:hover {
+  background: var(--bg-glass-hover);
+  border-color: var(--primary-light);
+}
+
+/* === Input === */
+.input-field {
+  width: 100%;
+  padding: 14px 18px;
+  font-family: var(--font-primary);
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: all var(--duration-normal) var(--ease-smooth);
+}
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: #fff;
+}
+
+/* === Animations === */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.4); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s var(--ease-smooth) forwards;
+}
+
+/* === Page Transition === */
+.page-enter-active,
+.page-leave-active {
+  transition: all 0.4s var(--ease-smooth);
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
