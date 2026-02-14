@@ -29,7 +29,7 @@
             </div>
           </div>
         </div>
-        <p class="hint-text">将 .glb 文件放入 public/models/ 目录</p>
+        <p class="hint-text">将 .glb 或 .pmx 文件放入 public/models/ 目录</p>
       </div>
     </transition>
   </div>
@@ -58,7 +58,7 @@ const models = ref<ModelInfo[]>([
   {
     id: 'anime-girl',
     name: '动漫少女',
-    path: '/models/anime-girl.glb',
+    path: '/models/dafeng/dafeng.pmx',
     thumbnail: '👧',
     description: '二次元风格角色'
   },

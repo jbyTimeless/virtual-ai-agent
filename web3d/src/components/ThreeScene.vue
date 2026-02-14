@@ -15,6 +15,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { loadPMX } from '@/utils/pmxLoader'
 import gsap from 'gsap'
 
 const props = defineProps<{
@@ -35,10 +36,21 @@ let camera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
 let controls: OrbitControls
 let mixer: THREE.AnimationMixer | null = null
-let currentModel: THREE.Group | null = null
+let currentModel: THREE.Object3D | null = null
 let clock: THREE.Clock
 let animFrameId: number
 let animations: THREE.AnimationClip[] = []
+
+let currentModelType: 'glb' | 'pmx' = 'glb'
+
+/**
+ * 根据文件扩展名判断模型类型
+ */
+function getModelType(path: string): 'glb' | 'pmx' {
+  const ext = path.split('.').pop()?.toLowerCase()
+  if (ext === 'pmx' || ext === 'pmd') return 'pmx'
+  return 'glb'
+}
 
 function initScene() {
   const container = containerRef.value!
@@ -46,7 +58,7 @@ function initScene() {
 
   // Scene
   scene = new THREE.Scene()
-  scene.background = null // transparent, CSS handles background
+  scene.background = null
 
   // Camera
   const aspect = container.clientWidth / container.clientHeight
@@ -58,42 +70,39 @@ function initScene() {
     canvas,
     antialias: true,
     alpha: true,
+    logarithmicDepthBuffer: true, // 核心优化：解决多层衣服导致的 Z 冲突和粗糙感
     powerPreference: 'high-performance'
   })
   renderer.setSize(container.clientWidth, container.clientHeight)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.2
+  renderer.toneMapping = THREE.NoToneMapping // 动漫模型通常不需要强烈的色调映射
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
 
-  // Lights — anime-style rim + ambient
-  const ambientLight = new THREE.AmbientLight(0x8888cc, 0.6)
-  scene.add(ambientLight)
+  // Lights
+  // Lights - 极致动漫调优：平衡光感，防止冲淡 Toon 效果
+  const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x555555, 0.6)
+  scene.add(hemisphereLight)
 
-  const mainLight = new THREE.DirectionalLight(0xffffff, 1.2)
-  mainLight.position.set(2, 4, 3)
+  const mainLight = new THREE.DirectionalLight(0xffffff, 0.7)
+  mainLight.position.set(5, 10, 5)
   mainLight.castShadow = true
-  mainLight.shadow.mapSize.set(1024, 1024)
+  mainLight.shadow.mapSize.set(2048, 2048)
+  // 终极针对性优化：调高 NormalBias 彻底消除脸部褶皱
+  mainLight.shadow.bias = -0.0005
+  mainLight.shadow.normalBias = 0.04 
   scene.add(mainLight)
 
-  // Rim light (purple tint from behind)
-  const rimLight = new THREE.DirectionalLight(0x7c3aed, 0.8)
+  const fillLight = new THREE.DirectionalLight(0xfff5ee, 0.4) // 暖白色侧光，让皮肤更红润高级
+  fillLight.position.set(-5, 3, 2)
+  scene.add(fillLight)
+
+  const rimLight = new THREE.DirectionalLight(0xffffff, 0.4)
   rimLight.position.set(-2, 2, -3)
   scene.add(rimLight)
 
-  // Accent light (cyan from side)
-  const accentLight = new THREE.PointLight(0x06b6d4, 0.6, 10)
-  accentLight.position.set(3, 1, 0)
-  scene.add(accentLight)
-
-  // Bottom fill light
-  const fillLight = new THREE.DirectionalLight(0xec4899, 0.3)
-  fillLight.position.set(0, -2, 2)
-  scene.add(fillLight)
-
-  // Ground circle (subtle glow platform)
+  // Ground circle
   const groundGeo = new THREE.CircleGeometry(1.5, 64)
   const groundMat = new THREE.MeshStandardMaterial({
     color: 0x7c3aed,
@@ -124,87 +133,170 @@ function initScene() {
   clock = new THREE.Clock()
 }
 
-async function loadModel(path: string) {
-  if (!path) return
-  isModelLoading.value = true
-
-  // Remove current model
+/**
+ * 清除当前模型
+ */
+function clearCurrentModel() {
   if (currentModel) {
     scene.remove(currentModel)
     currentModel = null
-    mixer = null
-    animations = []
   }
+  if (mixer) {
+    mixer.stopAllAction()
+    mixer = null
+  }
+  animations = []
+}
 
-  const loader = new GLTFLoader()
+/**
+ * 自动缩放 & 居中模型（GLB 和 PMX 通用）
+ */
+function autoScaleAndCenter(model: THREE.Object3D) {
+  const box = new THREE.Box3().setFromObject(model)
+  const size = new THREE.Vector3()
+  const center = new THREE.Vector3()
+  box.getSize(size)
+  box.getCenter(center)
 
-  try {
-    const gltf = await loader.loadAsync(path)
-    const model = gltf.scene
+  console.log('ThreeScene: 模型原始包围盒最小点:', box.min)
+  console.log('ThreeScene: 模型原始尺寸:', size)
+  console.log('ThreeScene: 模型原始中心:', center)
 
-    // Auto-scale and center
-    const box = new THREE.Box3().setFromObject(model)
-    const size = new THREE.Vector3()
-    const center = new THREE.Vector3()
-    box.getSize(size)
-    box.getCenter(center)
-
-    const maxDim = Math.max(size.x, size.y, size.z)
+  const maxDim = Math.max(size.x, size.y, size.z)
+  if (maxDim > 0) {
     const scale = 2 / maxDim
+    console.log('ThreeScene: 计算出的缩放倍数:', scale)
     model.scale.setScalar(scale)
-
-    // Position so feet are at y=0
     model.position.y = -(box.min.y * scale)
     model.position.x = -(center.x * scale)
     model.position.z = -(center.z * scale)
+    console.log('ThreeScene: 调整后位置:', model.position)
+  } else {
+    console.warn('ThreeScene: 模型尺寸检测为 0, 无法自动缩放.')
+  }
+}
 
-    // Enable shadows
-    model.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        child.castShadow = true
-        child.receiveShadow = true
-      }
-    })
+/**
+ * 入场动画（GSAP）
+ */
+function playEntryAnimation(model: THREE.Object3D) {
+  gsap.from(model.position, {
+    y: model.position.y - 0.5,
+    duration: 1,
+    ease: 'elastic.out(1, 0.5)'
+  })
+  gsap.from(model.rotation, {
+    y: Math.PI * 2,
+    duration: 1.2,
+    ease: 'power3.out'
+  })
+  gsap.from(model.scale, {
+    x: 0, y: 0, z: 0,
+    duration: 0.8,
+    ease: 'back.out(1.7)'
+  })
+}
 
-    scene.add(model)
-    currentModel = model as THREE.Group
+/**
+ * 加载 GLB/GLTF 模型
+ */
+async function loadGLBModel(path: string) {
+  const loader = new GLTFLoader()
+  const gltf = await loader.loadAsync(path)
+  const model = gltf.scene
 
-    // Animations
-    if (gltf.animations.length > 0) {
-      mixer = new THREE.AnimationMixer(model)
-      animations = gltf.animations
-      // Play first animation by default (idle)
-      const idleClip = animations.find(a =>
-        a.name.toLowerCase().includes('idle') || a.name.toLowerCase().includes('stand')
-      ) || animations[0]
-      if (idleClip) {
-        mixer.clipAction(idleClip).play()
-      }
-      emit('animationList', animations.map(a => a.name))
+  autoScaleAndCenter(model)
+
+  model.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+  })
+
+  scene.add(model)
+  currentModel = model
+
+  // 动画
+  if (gltf.animations.length > 0) {
+    mixer = new THREE.AnimationMixer(model)
+    animations = gltf.animations
+    const idleClip = animations.find(a =>
+      a.name.toLowerCase().includes('idle') || a.name.toLowerCase().includes('stand')
+    ) || animations[0]
+    if (idleClip) {
+      mixer.clipAction(idleClip).play()
+    }
+    emit('animationList', animations.map(a => a.name))
+  }
+}
+
+/**
+ * 加载 PMX/PMD 模型（MMD 格式）
+ */
+async function loadPMXModel(path: string) {
+  console.log('ThreeScene: 准备加载 PMX 模型...', path)
+  const mesh = await loadPMX(path, (progress: ProgressEvent) => {
+    if (progress.total > 0) {
+      const pct = Math.round((progress.loaded / progress.total) * 100)
+      console.log(`PMX 加载进度: ${pct}%`)
+    }
+  })
+
+  console.log('ThreeScene: PMX 网格构建完成, 开始自动缩放...', mesh)
+  autoScaleAndCenter(mesh)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+
+  scene.add(mesh)
+  currentModel = mesh
+  emit('animationList', [])
+}
+
+let currentLoadId = 0
+
+/**
+ * 加载模型（统一入口，自动检测格式）
+ */
+async function loadModel(path: string) {
+  if (!path) return
+  
+  const loadId = ++currentLoadId
+  isModelLoading.value = true
+  console.log(`ThreeScene: [Load#${loadId}] 开始加载任务: ${path}`)
+
+  const type = getModelType(path)
+  currentModelType = type
+
+  try {
+    // 异步加载前先清理
+    clearCurrentModel()
+
+    if (type === 'pmx') {
+      await loadPMXModel(path)
+    } else {
+      await loadGLBModel(path)
     }
 
-    // Entry animation with GSAP
-    gsap.from(model.position, {
-      y: model.position.y - 0.5,
-      duration: 1,
-      ease: 'elastic.out(1, 0.5)'
-    })
-    gsap.from(model.rotation, {
-      y: Math.PI * 2,
-      duration: 1.2,
-      ease: 'power3.out'
-    })
-    gsap.from(model.scale, {
-      x: 0, y: 0, z: 0,
-      duration: 0.8,
-      ease: 'back.out(1.7)'
-    })
+    // 检查是否已经是过时的加载请求
+    if (loadId !== currentLoadId) {
+      console.warn(`ThreeScene: [Load#${loadId}] 请求已过时，取消渲染`)
+      return
+    }
 
+    if (currentModel) {
+      console.log(`ThreeScene: [Load#${loadId}] 模型加载完毕`)
+      playEntryAnimation(currentModel)
+    }
     emit('modelLoaded')
   } catch (error) {
-    console.error('Failed to load model:', error)
+    if (loadId === currentLoadId) {
+      console.error(`ThreeScene: [Load#${loadId}] 加载发生错误:`, error)
+    }
   } finally {
-    isModelLoading.value = false
+    if (loadId === currentLoadId) {
+      isModelLoading.value = false
+    }
   }
 }
 
@@ -212,8 +304,6 @@ function playAnimation(name: string) {
   if (!mixer || animations.length === 0) return
   const clip = animations.find(a => a.name === name)
   if (!clip) return
-
-  // Fade out all current
   mixer.stopAllAction()
   const action = mixer.clipAction(clip)
   action.reset().fadeIn(0.3).play()
@@ -221,21 +311,24 @@ function playAnimation(name: string) {
 
 function playTalkAnimation() {
   if (!currentModel) return
-  // If there's a talk animation, play it
-  const talkClip = animations.find(a =>
-    a.name.toLowerCase().includes('talk') || a.name.toLowerCase().includes('speak')
-  )
-  if (talkClip && mixer) {
-    const current = mixer.existingAction(talkClip)
-    if (current) {
-      current.reset().fadeIn(0.3).play()
-    } else {
-      mixer.clipAction(talkClip).reset().fadeIn(0.3).play()
+
+  // GLB: 尝试播放 talk 动画
+  if (currentModelType === 'glb') {
+    const talkClip = animations.find(a =>
+      a.name.toLowerCase().includes('talk') || a.name.toLowerCase().includes('speak')
+    )
+    if (talkClip && mixer) {
+      const current = mixer.existingAction(talkClip)
+      if (current) {
+        current.reset().fadeIn(0.3).play()
+      } else {
+        mixer.clipAction(talkClip).reset().fadeIn(0.3).play()
+      }
+      return
     }
-    return
   }
 
-  // Fallback: GSAP head bob / subtle movement
+  // 通用后备：GSAP 晃动
   if (currentModel) {
     gsap.to(currentModel.rotation, {
       y: currentModel.rotation.y + 0.1,
@@ -269,7 +362,10 @@ function playIdleAnimation() {
 function animate() {
   animFrameId = requestAnimationFrame(animate)
   const delta = clock.getDelta()
+
+  // 动画更新
   if (mixer) mixer.update(delta)
+
   controls.update()
   renderer.render(scene, camera)
 }

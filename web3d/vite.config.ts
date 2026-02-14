@@ -7,7 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
+    },
+    mainFields: ['module', 'jsnext:main', 'jsnext', 'main']
   },
   server: {
     port: 5173,
@@ -18,5 +19,5 @@ export default defineConfig({
       }
     }
   },
-  assetsInclude: ['**/*.glb', '**/*.gltf']
+  assetsInclude: ['**/*.glb', '**/*.gltf', '**/*.pmx', '**/*.pmd']
 })
