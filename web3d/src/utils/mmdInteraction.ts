@@ -65,8 +65,46 @@ function onWindowResize() {
     state.windowHalfY = window.innerHeight / 2;
 }
 
+// 手臂摆动相关骨骼
+const SWAY_BONES = ['左腕', '右腕', '左ひじ', '右ひじ']
+
 /**
- * 在渲染循环中调用，更新骨骼旋转
+ * 更新手臂自然摆动 (呼吸感)
+ * @param mesh SkinnedMesh
+ * @param elapsed 总运行时间 (秒)
+ */
+export function updateArmSway(mesh: THREE.SkinnedMesh, elapsed: number) {
+    if (!mesh.skeleton) return
+
+    mesh.skeleton.bones.forEach(bone => {
+        const name = bone.name
+        if (SWAY_BONES.includes(name)) {
+            // 首次访问时记录初始旋转 (此时应该是 Standing Pose 设置好的状态)
+            if (!initialQuaternions.has(name)) {
+                initialQuaternions.set(name, bone.quaternion.clone())
+            }
+            const initialQ = initialQuaternions.get(name)!
+
+            // 计算摆动增量
+            // 频率: 0.5Hz (2秒一次呼吸)
+            // 幅度: 0.05弧度 (~3度)
+            const angle = Math.sin(elapsed * 2.0) * 0.05
+
+            // 左臂负向，右臂正向 (镜像摆动)
+            const isLeft = name.includes('左')
+            const axis = new THREE.Vector3(0, 0, 1) // 绕 Z 轴摆动 (前后/上下)
+
+            const deltaQ = new THREE.Quaternion().setFromAxisAngle(axis, isLeft ? angle : -angle)
+
+            // 应用旋转
+            const targetQ = initialQ.clone().multiply(deltaQ)
+            bone.quaternion.slerp(targetQ, 0.1)
+        }
+    })
+}
+
+/**
+ * 在渲染循环中调用，更新骨骼旋转 (Gaze)
  * @param mesh SkinnedMesh
  */
 export function updateGaze(mesh: THREE.SkinnedMesh) {

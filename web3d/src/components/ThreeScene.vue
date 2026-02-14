@@ -16,8 +16,8 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { loadPMX } from '@/utils/pmxLoader'
-import { applySittingPose } from '@/utils/mmdPose'
-import { initInteraction, disposeInteraction, updateGaze } from '@/utils/mmdInteraction'
+import { applySittingPose, applyStandingPose } from '@/utils/mmdPose'
+import { initInteraction, disposeInteraction, updateGaze, updateArmSway } from '@/utils/mmdInteraction'
 import gsap from 'gsap'
 
 const props = defineProps<{
@@ -248,8 +248,8 @@ async function loadPMXModel(path: string) {
   console.log('ThreeScene: PMX 网格构建完成, 开始自动缩放...', mesh)
   autoScaleAndCenter(mesh)
   
-  // 应用坐姿 (FK)
-  applySittingPose(mesh)
+  // 应用站立垂手姿态 (FK)
+  applyStandingPose(mesh)
 
   mesh.castShadow = true
   mesh.receiveShadow = true
@@ -375,6 +375,7 @@ function animate() {
   // 眼神跟随更新
   if (currentModelType === 'pmx' && currentModel) {
       updateGaze(currentModel as THREE.SkinnedMesh)
+      updateArmSway(currentModel as THREE.SkinnedMesh, clock.getElapsedTime())
   }
 
   controls.update()
@@ -399,14 +400,49 @@ watch(() => props.modelPath, (newPath) => {
 onMounted(() => {
   initScene()
   initInteraction() // 初始化交互监听
+  // window.addEventListener('wheel', handleWheel, { passive: false }) // 智能缩放撤回
   animate()
   window.addEventListener('resize', handleResize)
   if (props.modelPath) loadModel(props.modelPath)
 })
 
+const raycaster = new THREE.Raycaster()
+const mouse = new THREE.Vector2()
+
+function handleWheel(event: WheelEvent) {
+  if (!currentModel || !camera) return
+  
+  // 仅当放大操作 (deltaY < 0) 且当前控制器启用时触发
+  if (event.deltaY < 0) {
+     // 计算鼠标归一化坐标
+     const rect = canvasRef.value!.getBoundingClientRect()
+     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+     
+     raycaster.setFromCamera(mouse, camera)
+     
+     // 检测模型交点
+     const intersects = raycaster.intersectObject(currentModel, true)
+     if (intersects.length > 0) {
+         // 获取最近交点
+         const point = intersects[0].point
+         
+         // 平滑移动控制器目标点
+         gsap.to(controls.target, {
+             x: point.x,
+             y: point.y,
+             z: point.z,
+             duration: 0.8,
+             ease: 'power2.out'
+         })
+     }
+  }
+}
+
 onUnmounted(() => {
   cancelAnimationFrame(animFrameId)
   disposeInteraction() // 销毁交互监听
+  // window.removeEventListener('wheel', handleWheel) // 智能缩放撤回
   window.removeEventListener('resize', handleResize)
   renderer?.dispose()
   controls?.dispose()

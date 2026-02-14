@@ -75,6 +75,13 @@ const models = ref<ModelInfo[]>([
     path: '/models/ph/ph.pmx',
     thumbnail: '🧚',
     description: '魔法精灵角色'
+  },
+  {
+    id: 'mita',
+    name: '米塔',
+    path: '/models/mita/mita.pmx',
+    thumbnail: '🧚',
+    description: '米塔'
   }
 ])
 
