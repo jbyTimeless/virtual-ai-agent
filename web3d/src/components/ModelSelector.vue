@@ -72,7 +72,7 @@ const models = ref<ModelInfo[]>([
   {
     id: 'fairy',
     name: '精灵使者',
-    path: '/models/fairy.glb',
+    path: '/models/ph/ph.pmx',
     thumbnail: '🧚',
     description: '魔法精灵角色'
   }

@@ -16,6 +16,8 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { loadPMX } from '@/utils/pmxLoader'
+import { applySittingPose } from '@/utils/mmdPose'
+import { initInteraction, disposeInteraction, updateGaze } from '@/utils/mmdInteraction'
 import gsap from 'gsap'
 
 const props = defineProps<{
@@ -245,6 +247,10 @@ async function loadPMXModel(path: string) {
 
   console.log('ThreeScene: PMX 网格构建完成, 开始自动缩放...', mesh)
   autoScaleAndCenter(mesh)
+  
+  // 应用坐姿 (FK)
+  applySittingPose(mesh)
+
   mesh.castShadow = true
   mesh.receiveShadow = true
 
@@ -366,6 +372,11 @@ function animate() {
   // 动画更新
   if (mixer) mixer.update(delta)
 
+  // 眼神跟随更新
+  if (currentModelType === 'pmx' && currentModel) {
+      updateGaze(currentModel as THREE.SkinnedMesh)
+  }
+
   controls.update()
   renderer.render(scene, camera)
 }
@@ -387,6 +398,7 @@ watch(() => props.modelPath, (newPath) => {
 
 onMounted(() => {
   initScene()
+  initInteraction() // 初始化交互监听
   animate()
   window.addEventListener('resize', handleResize)
   if (props.modelPath) loadModel(props.modelPath)
@@ -394,6 +406,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   cancelAnimationFrame(animFrameId)
+  disposeInteraction() // 销毁交互监听
   window.removeEventListener('resize', handleResize)
   renderer?.dispose()
   controls?.dispose()

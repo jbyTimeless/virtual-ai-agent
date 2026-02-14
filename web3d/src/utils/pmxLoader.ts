@@ -282,22 +282,52 @@ function buildOutlineMesh(geo: THREE.BufferGeometry, data: any, skeleton: THREE.
 
 function buildSkeleton(data: any) {
     if (!data.bones || data.bones.length === 0) return { skeleton: new THREE.Skeleton([]), rootBone: new THREE.Bone() }
+
     const bones: THREE.Bone[] = []
+    const bonePositions: THREE.Vector3[] = [] // 存储所有骨骼的“绝对世界坐标”（经过 Z轴取反后）
+
+    // 1. 创建所有 Bone 对象并记录绝对跟坐标
     for (let i = 0; i < data.bones.length; i++) {
         const b = new THREE.Bone()
         const d = data.bones[i]
         b.name = d?.name ?? `bone_${i}`
-        b.position.set(d?.position?.[0] ?? 0, d?.position?.[1] ?? 0, -(d?.position?.[2] ?? 0))
+
+        // 记录绝对坐标 (Z轴取反)
+        const x = d?.position?.[0] ?? 0
+        const y = d?.position?.[1] ?? 0
+        const z = -(d?.position?.[2] ?? 0) // Z flip
+
+        b.position.set(x, y, z)
+        bonePositions.push(new THREE.Vector3(x, y, z))
+
+        // 应用初始旋转 (如果有) - MMD通常只有位置，但PMX可能有默认旋转
+        // 注意：这里暂不应用 d.rotation，因为 MMD 骨骼定义主要是 Position
+
         bones.push(b)
     }
+
     const root = new THREE.Bone(); root.name = '__root__'
+
+    // 2. 建立层级关系并计算相对坐标
     for (let i = 0; i < data.bones.length; i++) {
         const d = data.bones[i]
         const pIdx = d?.parentIndex ?? -1
+
         if (pIdx >= 0 && pIdx < bones.length) {
+            // 父子连接
             bones[pIdx].add(bones[i])
-            bones[i].position.sub(bones[pIdx].position)
-        } else root.add(bones[i])
+
+            // 核心修复：相对位置 = 子绝对 - 父绝对
+            // 之前的错误代码使用了已经变成相对坐标的 bones[pIdx].position，导致层级越深偏移越严重
+            const childGlobal = bonePositions[i]!
+            const parentGlobal = bonePositions[pIdx]!
+
+            bones[i].position.subVectors(childGlobal, parentGlobal)
+        } else {
+            root.add(bones[i])
+            // 根节点保持绝对坐标 (相对于模型原点)
+        }
     }
+
     return { skeleton: new THREE.Skeleton(bones), rootBone: root }
 }
