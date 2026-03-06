@@ -111,6 +111,14 @@ public class UserService {
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         saveTokenToRedis(user.getId(), token);
 
+
+        org.springframework.security.authentication.UsernamePasswordAuthenticationToken authentication =
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        user.getUsername(), null, java.util.Collections.emptyList());
+        authentication.setDetails(user.getId()); // 将 userId 存入 details
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authentication);
+
+
         return ApiResult.success("登录成功", buildAuthData(token, user));
     }
 

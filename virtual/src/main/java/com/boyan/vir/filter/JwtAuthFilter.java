@@ -70,6 +70,13 @@ public class JwtAuthFilter implements Filter {
         request.setAttribute("userId", userId);
         request.setAttribute("username", username);
 
+        // 同时存入 Spring Security 上下文，方便后续工具类获取
+        org.springframework.security.authentication.UsernamePasswordAuthenticationToken authentication =
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        username, null, java.util.Collections.emptyList());
+        authentication.setDetails(userId); // 将 userId 存入 details
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(authentication);
+
         chain.doFilter(request, response);
     }
 
