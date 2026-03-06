@@ -6,6 +6,7 @@ import com.boyan.vir.dto.ChatSendResponse;
 import com.boyan.vir.dto.ChatHistoryResponse;
 import com.boyan.vir.dto.ChatHistoryResponse.ChatMessageItem;
 import com.boyan.vir.repository.MySQLChatMemoryRepository;
+import com.boyan.vir.tools.DateTimeTools;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import reactor.core.publisher.Flux;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,6 +36,9 @@ public class ChatController {
 
     @Autowired
     private MySQLChatMemoryRepository memoryRepository;
+
+    @Autowired
+    private DateTimeTools dateTimeTools;
 
     // 智能体系统提示词映射
     private static final Map<String, String> AGENT_PROMPTS = Map.of(
@@ -132,5 +138,22 @@ public class ChatController {
         } catch (Exception e) {
             System.err.println("更新记忆元数据失败: " + e.getMessage());
         }
+    }
+
+
+    /**
+     * 不要用记忆化的client
+     */
+    @Autowired()
+    @Qualifier("qwenClient")
+    private ChatClient qwenClient;
+    @GetMapping("/tools/getCurTime")
+    public Flux<String> getCurTime(@RequestParam(name = "msg", defaultValue = "请调用获取当前时间的工具，告诉我现在的具体时间") String msg) {
+        return qwenClient
+                .prompt()
+                .user(msg)
+                .tools(dateTimeTools)
+                .stream() // 流式返回结果
+                .content();
     }
 }

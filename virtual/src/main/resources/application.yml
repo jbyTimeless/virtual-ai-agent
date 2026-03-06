@@ -11,9 +11,9 @@ spring:
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     # 关键修改：将 characterEncoding=utf8mb4 改为 characterEncoding=utf8
-    url: jdbc:mysql://127.0.0.1:3306/saa_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useJDBCCompliantTimezoneShift=true
+    url: jdbc:mysql://14.103.17.71:3306/saa_db?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useJDBCCompliantTimezoneShift=true
     username: root
-    password: Timeless_18818
+    password: magna123
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       minimum-idle: 5
@@ -41,10 +41,10 @@ spring:
         dimensions: 1024
   data:
     redis:
-      host: localhost
+      host: 14.103.17.71
       port: 6379
       username: default
-      password:
+      password: magna123
 
 app:
   jwt:
