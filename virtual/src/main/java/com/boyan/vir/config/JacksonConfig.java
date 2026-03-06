@@ -166,11 +166,27 @@ public class JacksonConfig {
                     }
                 }
 
-                return new AssistantMessage(content, metadata, toolCalls);
+                return AssistantMessage.builder()
+                        .content(content)
+                        .properties(metadata)
+                        .toolCalls(toolCalls)
+                        .build();
             } else if (messageClass == SystemMessage.class) {
                 String content = extractTextContent(node);
                 return new SystemMessage(content);
             } else if (messageClass == ToolResponseMessage.class) {
+                // 获取metadata
+                JsonNode metadataNode = node.get("metadata");
+                java.util.Map<String, Object> metadata = java.util.Collections.emptyMap();
+                if (metadataNode != null && metadataNode.isObject()) {
+                    ObjectMapper mapper = (ObjectMapper) p.getCodec();
+                    try {
+                        metadata = mapper.convertValue(metadataNode, java.util.Map.class);
+                    } catch (Exception e) {
+                        metadata = java.util.Collections.emptyMap();
+                    }
+                }
+
                 // 从JSON中提取responses数组并反序列化
                 JsonNode responsesNode = node.get("responses");
                 if (responsesNode != null && responsesNode.isArray()) {
@@ -179,14 +195,23 @@ public class JacksonConfig {
                         List<ToolResponseMessage.ToolResponse> responses = mapper.convertValue(responsesNode,
                                 mapper.getTypeFactory().constructCollectionType(List.class,
                                         ToolResponseMessage.ToolResponse.class));
-                        return new ToolResponseMessage(responses);
+                        return ToolResponseMessage.builder()
+                                .responses(responses)
+                                .metadata(metadata)
+                                .build();
                     } catch (Exception e) {
                         // 如果转换失败，创建空列表
-                        return new ToolResponseMessage(java.util.Collections.emptyList());
+                        return ToolResponseMessage.builder()
+                                .responses(java.util.Collections.emptyList())
+                                .metadata(metadata)
+                                .build();
                     }
                 } else {
                     // 如果没有responses数组，创建空列表
-                    return new ToolResponseMessage(java.util.Collections.emptyList());
+                    return ToolResponseMessage.builder()
+                            .responses(java.util.Collections.emptyList())
+                            .metadata(metadata)
+                            .build();
                 }
             }
 

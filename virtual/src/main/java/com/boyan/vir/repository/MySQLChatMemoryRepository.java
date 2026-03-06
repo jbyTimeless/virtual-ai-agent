@@ -77,10 +77,7 @@ public class MySQLChatMemoryRepository implements ChatMemoryRepository {
             Optional<String> messagesJson = resultList.stream().findFirst();
 
             if (messagesJson.isPresent() && StringUtils.hasText(messagesJson.get())) {
-                ObjectMapper tempMapper = objectMapper.copy();
-                tempMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-                return tempMapper.readValue(messagesJson.get(),
-                        tempMapper.getTypeFactory().constructCollectionType(List.class, Message.class));
+                return objectMapper.readValue(messagesJson.get(), messageListType);
             }
             return Collections.emptyList();
         } catch (JsonProcessingException e) {
@@ -99,7 +96,7 @@ public class MySQLChatMemoryRepository implements ChatMemoryRepository {
         try {
             String messagesJson = objectMapper.writeValueAsString(messages);
             Message lastMessage = messages.get(messages.size() - 1);
-            String role = lastMessage.getClass().getSimpleName().replace("Message", "").toUpperCase();
+            String role = lastMessage.getMessageType().name();
             String content = Optional.ofNullable(lastMessage.getText()).orElse("");
 
             // 先查是否已有此 conversation_id 的记录
@@ -149,7 +146,7 @@ public class MySQLChatMemoryRepository implements ChatMemoryRepository {
         try {
             String messagesJson = objectMapper.writeValueAsString(messages);
             Message lastMessage = messages.get(messages.size() - 1);
-            String role = lastMessage.getClass().getSimpleName().replace("Message", "").toUpperCase();
+            String role = lastMessage.getMessageType().name();
             String content = Optional.ofNullable(lastMessage.getText()).orElse("");
 
             jdbcTemplate.update(UPSERT_SQL,
@@ -190,10 +187,7 @@ public class MySQLChatMemoryRepository implements ChatMemoryRepository {
             if (!StringUtils.hasText(json)) {
                 return Collections.emptyList();
             }
-            ObjectMapper tempMapper = objectMapper.copy();
-            tempMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            return tempMapper.readValue(json,
-                    tempMapper.getTypeFactory().constructCollectionType(List.class, Message.class));
+            return objectMapper.readValue(json, messageListType);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("反序列化消息失败：" + e.getMessage(), e);
         } catch (Exception e) {
