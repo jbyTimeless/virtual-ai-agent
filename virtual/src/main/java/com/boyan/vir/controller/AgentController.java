@@ -8,6 +8,7 @@ import com.boyan.vir.dto.AgentResponse;
 import com.boyan.vir.dto.ApiResult;
 import com.boyan.vir.dto.SendEmailRequest;
 import com.boyan.vir.util.EncryptUtils;
+import com.boyan.vir.util.MailUtil;
 import com.boyan.vir.util.UserContext;
 import opennlp.tools.util.StringUtil;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -22,6 +23,9 @@ public class AgentController {
     @Autowired
     @Qualifier("qwenReactAgent")
     private ReactAgent qwenReactAgent;
+
+    @Autowired
+    private MailUtil mailUtil;
 
     @PostMapping("/chat")
     public ApiResult<AgentResponse> sendChat(@RequestBody AgentChatRequest ar) {
@@ -49,6 +53,9 @@ public class AgentController {
 
     @PostMapping("/sendEmail")
     public ApiResult<String> sendEmail(@RequestBody SendEmailRequest send) {
+        mailUtil.sendSimpleMail(send.getTo(), send.getSubject(), send.getContent());
+
+
         return ApiResult.success("ok");
     }
 }

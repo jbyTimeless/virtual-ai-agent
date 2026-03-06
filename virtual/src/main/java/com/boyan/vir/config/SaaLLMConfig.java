@@ -144,10 +144,10 @@ public class SaaLLMConfig {
                 .name("qwenReactAgent")
                 .model(qwen)
                 .tools(weatherTool, timeTool, sendEmailTool, deleteDataTool)
-                .hooks(summarizationHook, humanReviewHook)
+                //.hooks(summarizationHook, humanReviewHook)
                 //重试
-                .interceptors(ToolRetryInterceptor.builder().maxRetries(2)
-                        .onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE).build())
+                //.interceptors(ToolRetryInterceptor.builder().maxRetries(2)
+                //        .onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE).build())
                 .saver(MysqlSaver.builder()
                         .dataSource(dataSource)
                         .build())
