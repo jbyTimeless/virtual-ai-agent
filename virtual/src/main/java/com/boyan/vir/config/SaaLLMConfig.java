@@ -5,11 +5,14 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.dashscope.rag.DashScopeDocumentTransformer;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.agent.hook.hip.HumanInTheLoopHook;
+import com.alibaba.cloud.ai.graph.agent.hook.hip.ToolConfig;
+import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
+import com.alibaba.cloud.ai.graph.agent.interceptor.toolretry.ToolRetryInterceptor;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.mysql.MysqlSaver;
 import com.boyan.vir.repository.MySQLChatMemoryRepository;
-import com.boyan.vir.tools.DateTimeTool;
-import com.boyan.vir.tools.DateTimeTools;
-import com.boyan.vir.tools.WeatherTool;
+import com.boyan.vir.tools.*;
+import com.boyan.vir.util.MailUtil;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
@@ -19,6 +22,7 @@ import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -94,6 +98,7 @@ public class SaaLLMConfig {
 
     @Bean("qwenReactAgent")
     public ReactAgent qwenReactAgent(@Qualifier("qwen") ChatModel qwen,
+                                     MailUtil mailUtil,
                                      DataSource dataSource) {
 
         ToolCallback weatherTool = FunctionToolCallback.builder("get_weather", new WeatherTool())
@@ -106,10 +111,43 @@ public class SaaLLMConfig {
                 .inputType(DateTimeTool.DateTimeRequest.class)
                 .build();
 
+        ToolCallback sendEmailTool = FunctionToolCallback.builder("sendEmailTool", new EmailTool(mailUtil))
+                .description("发送一封电子邮件给指定的收件人")
+                .inputType(EmailTool.EmailRequest.class)
+                .build();
+
+        ToolCallback deleteDataTool = FunctionToolCallback.builder("deleteDataTool", new DeleteDataTool())
+                .description("根据提供的 ID 删除特定的数据记录")
+                .inputType(DeleteDataTool.DeleteRequest.class)
+                .build();
+
+        // 创建 Human-in-the-Loop Hook
+        HumanInTheLoopHook humanReviewHook = HumanInTheLoopHook.builder()
+                // 为"发送邮件工具"配置人工审核环节
+                .approvalOn("sendEmailTool", ToolConfig.builder()
+                        .description("请确认发送该邮件。") // 审核提示描述
+                        .build())
+                // 为"删除数据工具"配置人工审核环节
+                .approvalOn("deleteDataTool", ToolConfig.builder()
+                        .description("请确认删除该数据。") // 审核提示描述
+                        .build())
+                .build();
+
+        // 创建消息压缩 Hook
+        SummarizationHook summarizationHook = SummarizationHook.builder()
+                .model(qwen)
+                .maxTokensBeforeSummary(4000)
+                .messagesToKeep(20)
+                .build();
+
         return ReactAgent.builder()
                 .name("qwenReactAgent")
                 .model(qwen)
-                .tools(weatherTool, timeTool)
+                .tools(weatherTool, timeTool, sendEmailTool, deleteDataTool)
+                .hooks(summarizationHook, humanReviewHook)
+                //重试
+                .interceptors(ToolRetryInterceptor.builder().maxRetries(2)
+                        .onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE).build())
                 .saver(MysqlSaver.builder()
                         .dataSource(dataSource)
                         .build())

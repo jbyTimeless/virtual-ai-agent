@@ -6,16 +6,15 @@ import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.boyan.vir.dto.AgentChatRequest;
 import com.boyan.vir.dto.AgentResponse;
 import com.boyan.vir.dto.ApiResult;
+import com.boyan.vir.dto.SendEmailRequest;
 import com.boyan.vir.util.EncryptUtils;
 import com.boyan.vir.util.UserContext;
-import jakarta.servlet.http.HttpServletRequest;
 import opennlp.tools.util.StringUtil;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/agent")
@@ -45,5 +44,11 @@ public class AgentController {
             return ApiResult.error("失败");
         }
 
+    }
+
+
+    @PostMapping("/sendEmail")
+    public ApiResult<String> sendEmail(@RequestBody SendEmailRequest send) {
+        return ApiResult.success("ok");
     }
 }
