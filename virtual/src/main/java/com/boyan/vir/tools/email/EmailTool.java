@@ -1,6 +1,5 @@
-package com.boyan.vir.tools;
+package com.boyan.vir.tools.email;
 
-import com.boyan.vir.util.MailUtil;
 import com.boyan.vir.util.UserContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,9 +15,9 @@ public class EmailTool implements BiFunction<EmailTool.EmailRequest, ToolContext
 
     private static final Logger logger = LoggerFactory.getLogger(EmailTool.class);
 
-    private final MailUtil mailUtil;
+    private final EmailService mailUtil;
 
-    public EmailTool(MailUtil mailUtil) {
+    public EmailTool(EmailService mailUtil) {
         this.mailUtil = mailUtil;
     }
 

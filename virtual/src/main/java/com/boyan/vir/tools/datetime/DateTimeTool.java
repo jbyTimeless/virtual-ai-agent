@@ -1,4 +1,4 @@
-package com.boyan.vir.tools;
+package com.boyan.vir.tools.datetime;
 
 import org.springframework.ai.chat.model.ToolContext;
 

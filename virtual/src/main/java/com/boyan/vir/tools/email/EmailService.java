@@ -1,4 +1,4 @@
-package com.boyan.vir.util;
+package com.boyan.vir.tools.email;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class MailUtil {
+public class EmailService {
 
     @Autowired
     private JavaMailSender mailSender;

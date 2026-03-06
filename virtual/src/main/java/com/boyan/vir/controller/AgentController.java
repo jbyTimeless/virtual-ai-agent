@@ -8,7 +8,7 @@ import com.boyan.vir.dto.AgentResponse;
 import com.boyan.vir.dto.ApiResult;
 import com.boyan.vir.dto.SendEmailRequest;
 import com.boyan.vir.util.EncryptUtils;
-import com.boyan.vir.util.MailUtil;
+import com.boyan.vir.tools.email.EmailService;
 import com.boyan.vir.util.UserContext;
 import opennlp.tools.util.StringUtil;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -25,7 +25,7 @@ public class AgentController {
     private ReactAgent qwenReactAgent;
 
     @Autowired
-    private MailUtil mailUtil;
+    private EmailService mailUtil;
 
     @PostMapping("/chat")
     public ApiResult<AgentResponse> sendChat(@RequestBody AgentChatRequest ar) {
