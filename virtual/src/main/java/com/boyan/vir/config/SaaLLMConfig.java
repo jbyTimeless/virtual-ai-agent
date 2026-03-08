@@ -12,6 +12,9 @@ import com.alibaba.cloud.ai.graph.checkpoint.savers.mysql.MysqlSaver;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
+import com.boyan.vir.Interceptors.ContentModerationInterceptor;
+import com.boyan.vir.Interceptors.ModelPerformanceInterceptor;
+import com.boyan.vir.Interceptors.ToolPerformanceInterceptor;
 import com.boyan.vir.hook.RAGMessagesHook;
 import com.boyan.vir.repository.MySQLChatMemoryRepository;
 import com.boyan.vir.tools.*;
@@ -168,6 +171,11 @@ public class SaaLLMConfig {
                 .skillRegistry(registry)
                 .build();
 
+        ContentModerationInterceptor contentModerationInterceptor = new ContentModerationInterceptor();
+        ModelPerformanceInterceptor modelPerformanceInterceptor = new ModelPerformanceInterceptor();
+        ToolPerformanceInterceptor toolPerformanceInterceptor = new ToolPerformanceInterceptor();
+
+
 
         RAGMessagesHook ragMessagesHook = new RAGMessagesHook(redisVectorStore);
 
@@ -179,6 +187,7 @@ public class SaaLLMConfig {
                 //重试
                 //.interceptors(ToolRetryInterceptor.builder().maxRetries(2)
                 //        .onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE).build())
+                .interceptors(contentModerationInterceptor, modelPerformanceInterceptor, toolPerformanceInterceptor)
                 .saver(MysqlSaver.builder()
                         .dataSource(dataSource)
                         .build())
