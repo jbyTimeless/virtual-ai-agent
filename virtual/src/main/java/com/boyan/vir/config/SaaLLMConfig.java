@@ -12,11 +12,9 @@ import com.alibaba.cloud.ai.graph.checkpoint.savers.mysql.MysqlSaver;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
 import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
+import com.boyan.vir.hook.RAGMessagesHook;
 import com.boyan.vir.repository.MySQLChatMemoryRepository;
 import com.boyan.vir.tools.*;
-import com.boyan.vir.tools.datetime.DateTimeTool;
-import com.boyan.vir.tools.email.EmailTool;
-import com.boyan.vir.tools.weather.WeatherTool;
 import com.boyan.vir.tools.email.EmailService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -25,6 +23,8 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.redis.RedisVectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -116,7 +116,8 @@ public class SaaLLMConfig {
     @Bean("qwenReactAgent")
     public ReactAgent qwenReactAgent(@Qualifier("qwen") ChatModel qwen,
                                      EmailService mailUtil,
-                                     DataSource dataSource) {
+                                     DataSource dataSource,
+                                     @Qualifier("redisVectorStore") RedisVectorStore redisVectorStore) {
 
 //        ToolCallback weatherTool = FunctionToolCallback.builder("get_weather", new WeatherTool())
 //                .description("给出所给城市的天气")
@@ -167,11 +168,14 @@ public class SaaLLMConfig {
                 .skillRegistry(registry)
                 .build();
 
+
+        RAGMessagesHook ragMessagesHook = new RAGMessagesHook(redisVectorStore);
+
         return ReactAgent.builder()
                 .name("qwenReactAgent")
                 .model(qwen)
                 .tools(weatherTool, emailTool, dateTimeTool,deleteDataTool)
-                .hooks(skillsHook)
+                .hooks(skillsHook, ragMessagesHook)
                 //重试
                 //.interceptors(ToolRetryInterceptor.builder().maxRetries(2)
                 //        .onFailure(ToolRetryInterceptor.OnFailureBehavior.RETURN_MESSAGE).build())

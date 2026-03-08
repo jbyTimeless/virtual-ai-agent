@@ -30,9 +30,9 @@ public class TxtFileProcessor {
             throw new RuntimeException("文件不存在或不是 TXT 文件：" + filePath);
         }
 
-        Charset charset = detectCharset(file);
-        String content = FileUtil.readString(file, charset);
-        log.info("读取 TXT 文件完成，文件大小：{}字符，编码：{}", content.length(), charset.displayName());
+        //Charset charset = detectCharset(file);
+        String content = FileUtil.readString(file, StandardCharsets.UTF_8);
+        //log.info("读取 TXT 文件完成，文件大小：{}字符，编码：{}", content.length(), charset.displayName());
 
         content = content.replaceAll("\\s+", " ").trim();
         if (content.isEmpty()) {

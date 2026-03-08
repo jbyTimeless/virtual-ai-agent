@@ -37,9 +37,9 @@ spring:
     vectorstore:
       redis:
         # 1. 索引基础配置
-        initialize-schema: false # 启动时自动创建Redis索引（首次运行必须为true，后续可改为false）
-        index-name: custom-index # Redis向量索引名称（自定义，建议小写+下划线）
-        prefix: custom-prefix # 向量数据在Redis中的Key前缀（如：custom-prefix:vector:123）
+        initialize-schema: true # 启动时自动创建Redis索引（首次运行必须为true，后续可改为false）
+        index-name: "custom-index:" # Redis向量索引名称（自定义，建议小写+下划线）
+        prefix: "custom-prefix:" # 向量数据在Redis中的Key前缀（如：custom-prefix:vector:123）
         # 2. 向量核心参数（必须与embedding模型匹配）
         dimensions: 1024 # text-embedding-v3的向量维度固定为1024，不可修改
         distance-type: COSINE # 距离计算方式（核心！可选：COSINE/ EUCLIDEAN/ MANHATTAN）
@@ -56,10 +56,10 @@ spring:
   # ========== Redis基础连接配置（适配VectorStore） ==========
   data:
     redis:
-      host: 14.103.17.71
+      host: 127.0.0.1
       port: 6379
-      username: default
-      password: magna123
+      #username: default
+      #password: 123456
       database: 0
       timeout: 2000
       jedis:
