@@ -11,6 +11,7 @@ import com.alibaba.cloud.ai.graph.agent.hook.summarization.SummarizationHook;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.mysql.MysqlSaver;
 import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
 import com.alibaba.cloud.ai.graph.skills.registry.classpath.ClasspathSkillRegistry;
+import com.alibaba.cloud.ai.memory.redis.JedisRedisChatMemoryRepository;
 import com.boyan.vir.repository.MySQLChatMemoryRepository;
 import com.boyan.vir.tools.*;
 import com.boyan.vir.tools.datetime.DateTimeTool;
@@ -78,20 +79,20 @@ public class SaaLLMConfig {
         return ChatClient.builder(chatModel).build();
     }
 
-//    //加入redis记忆化的qwen聊天
-//    @Bean("qwenRedisMemoryClient")
-//    public ChatClient qwenRedisMemoryClient(@Qualifier("qwen") ChatModel qwen,
-//                                       @Qualifier("redisChatMemoryRepository") RedisChatMemoryRepository redisChatMemoryRepository
-//    ) {
-//        MessageWindowChatMemory windowChatMemory = MessageWindowChatMemory.builder()
-//                .chatMemoryRepository(redisChatMemoryRepository)
-//                .maxMessages(10)
-//                .build();
-//        return ChatClient.builder(qwen)
-//                .defaultOptions(ChatOptions.builder().model(QWEN_MODEL).build())
-//                .defaultAdvisors(MessageChatMemoryAdvisor.builder(windowChatMemory).build())
-//                .build();
-//    }
+    //加入redis记忆化的qwen聊天
+    @Bean("qwenRedisMemoryClient")
+    public ChatClient qwenRedisMemoryClient(@Qualifier("qwen") ChatModel qwen,
+                                       @Qualifier("jedisRedisChatMemoryRepository") JedisRedisChatMemoryRepository jedisRedisChatMemoryRepository
+    ) {
+        MessageWindowChatMemory windowChatMemory = MessageWindowChatMemory.builder()
+                .chatMemoryRepository(jedisRedisChatMemoryRepository)
+                .maxMessages(10)
+                .build();
+        return ChatClient.builder(qwen)
+                .defaultOptions(ChatOptions.builder().model(QWEN_MODEL).build())
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(windowChatMemory).build())
+                .build();
+    }
 
 
     //加入mysql记忆化的qwen聊天

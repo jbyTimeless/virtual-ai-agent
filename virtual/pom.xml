@@ -67,6 +67,28 @@
             <version>${spring-ai.version}</version>
         </dependency>
 
+
+
+        <!-- 2. Redis Stack向量存储核心依赖（RAG场景核心） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-redis-store</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+
+        <!-- 3. 可选：阿里云AI扩展的Redis内存/向量增强（适配阿里云DashScope大模型） -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-memory-redis</artifactId>
+            <version>${spring-ai-alibaba.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+            <version>${spring-ai.version}</version>
+        </dependency>
+
         <!-- Redis VectorStore for RAG -->
 <!--        <dependency>-->
 <!--            <groupId>org.springframework.ai</groupId>-->
